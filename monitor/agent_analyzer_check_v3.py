@@ -30,7 +30,7 @@ def cc_get(ip,agent,index,elasticsearch,time_to,time_from):
                                                 },{
                                                         'prefix': {"host":'%s' % (agent)}
                                                 },{
-                                                        'prefix': {"message":'discontinuity'}
+                                                        'prefix': {"message":'Detected discontinuity'}
                                                 }  ]
                                         }
                                 }
@@ -41,35 +41,7 @@ def cc_get(ip,agent,index,elasticsearch,time_to,time_from):
 #               temp=re.search('(?<=skips:)\d+',result['hits']['hits'][i]['_source']['message'])
                         discontinuity_new+=int(re.search('(?<=skips:)\d+',result['hits']['hits'][i]['_source']['message']).group(0))
         return discontinuity_new
-def drop_get(ip,agent,index,elasticsearch,time_to,time_from):
-        result = elasticsearch.search(
-                index='%s' % (index),
-                size="1000",
-                body={
-                        'query': {
-                                'filtered': {
-                                        'query': {
-                                                'match': {"message":'%s' % (ip)}
-                                                },
-                                        'filter': {
-                                                'and' : [
-                                                {
-                                                        'range': {
-                                                                '@timestamp': {
-                                                                        'gt': '%s' % (time_to),
-                                                                        'lt': '%s' % (time_from)
-                                                                }
-                                                        }
-                                                },{
-                                                        'prefix': {"host":'%s' % (agent)}
-                                                },{
-                                                        'prefix': {"message":'30120'}
-                                                }  ]
-                                        }
-                                }
-                        }
-                })
-        return int(result['hits']['total'])
+
 def analyzer_check(id,ip,agent,analyzer_status,dropframe,dropframe_threshold,discontinuity,discontinuity_threshold,index,elasticsearch):
         drop=0
         ccerror=0
@@ -82,24 +54,9 @@ def analyzer_check(id,ip,agent,analyzer_status,dropframe,dropframe_threshold,dis
         count_cc=0
 #       list_time=['now','now-2m','now-4m','now-6m','now-8m','now-10m','now-12m','now-14m','now-16m']
         list_time=['now','now-1m','now-2m','now-3m','now-4m','now-5m','now-6m','now-7m','now-8m']
-        if dropframe_threshold!=0:
-                drop=(int(dropframe)*100)/int(dropframe_threshold)
+        
         if discontinuity_threshold!=0:
                 ccerror=(int(discontinuity)*100)/int(discontinuity_threshold)
-        if drop >= 25:
-                tmp=0
-                for i in range(5):
-                        drop_new=(int(drop_get(ip,agent,index,elasticsearch,list_time[i+1],list_time[i]))*100)/int(dropframe_threshold)
-                        if drop_new > 0:
-                                count_drop+=1
-                                if drop_new > 0 and drop_new < 40:
-                                        tmp+=2
-                                elif drop_new >= 40 and drop_new < 100:
-                                        tmp+=3
-                                elif drop_new >= 100:
-                                        tmp+=4
-                if count_drop >=3:
-                        status_drop=int(tmp/count_drop)
         if ccerror >= 25:
                 discontinuity_new=0
                 tmp=0
@@ -115,14 +72,7 @@ def analyzer_check(id,ip,agent,analyzer_status,dropframe,dropframe_threshold,dis
                                         tmp+=4
                 if count_cc >=3:
                         statuc_cc=int(tmp/count_cc)
-        if status_drop <= status_cc and status_drop!=1:
-                status_new=status_drop
-        elif status_drop <= status_cc and status_drop==1:
-                status_new=status_cc
-        elif status_cc <= status_drop and status_cc!=1:
-                status_new=status_cc
-        elif status_cc <= status_drop and status_cc==1:
-                status_new=status_drop
+        status_new=status_cc
         if status_new != analyzer_status:
                 text="IPmulticast=%s  agent=%s status=%d" % (ip, agent, status_new)
                 try:
