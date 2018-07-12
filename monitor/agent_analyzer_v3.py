@@ -29,36 +29,7 @@ def analyzer(id,ip,agent,discontinuity,dropframe,index,elasticsearch):
                                                 },{
                                                         'prefix': {"host":'%s' % (agent)}
                                                 },{
-                                                        'prefix': {"message":'30120'}
-                                                }  ]
-                                        }
-                                }
-                        }
-                })
-        dropframe_new=result['hits']['total']
-        discontinuity_new=0
-        result = es.search(
-                index='%s' % (index),
-                size=1000,
-                body={
-                        'query': {
-                                'filtered': {
-                                        'query': {
-                                                'match': {"message":'%s' % (ip)}
-                                                },
-                                        'filter': {
-                                                'and' : [
-                                                {
-                                                        'range': {
-                                                                '@timestamp': {
-                                                                        'gt': 'now-1m',
-                                                                        'lt': 'now'
-                                                                }
-                                                        }
-                                                },{
-                                                        'prefix': {"host":'%s' % (agent)}
-                                                },{
-                                                        'prefix': {"message":'discontinuity'}
+                                                        'prefix': {"message":'Detected discontinuity'}
                                                 }  ]
                                         }
                                 }
@@ -73,13 +44,8 @@ def analyzer(id,ip,agent,discontinuity,dropframe,index,elasticsearch):
                         requests.put(api+"profile_agent/"+str(id)+"/", json={"discontinuity": discontinuity_new})
                 except requests.exceptions.RequestException:
                         print "can't connect API!"
-        if dropframe != dropframe_new:
-                try:
-                        requests.put(api+"profile_agent/"+str(id)+"/", json={"dropframe": dropframe_new})
-                except requests.exceptions.RequestException:
-                        print "can't connect API!"
 
-configfile='/opt/monitor/config.py'
+                        configfile='/opt/monitor/config.py'
 if os.path.exists(configfile):
         execfile(configfile)
 else:
